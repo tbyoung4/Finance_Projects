@@ -54,3 +54,9 @@ Task 6:
 Run queries on the database table. Write a function load_to_db(), execute a given set of queries and verify the output.
 Task 7:
 Verify that the log entries have been completed at all stages by checking the contents of the file code_log.txt.
+
+Need the following:
+beautifulsoup4==4.12.3
+numpy==1.26.4
+pandas==2.2.1
+Requests==2.32.0
