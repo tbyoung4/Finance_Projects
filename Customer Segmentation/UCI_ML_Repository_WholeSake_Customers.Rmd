@@ -1,0 +1,152 @@
+---
+title: "UCI_ML_Repository_WholeSale_Customers"
+author: "Thomas Young"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+Website: https://archive.ics.uci.edu/dataset/292/wholesale+customers
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Only want continous variables for this analysis
+
+```{r}
+WHOLE <- read_csv("wholesale.csv")
+WHOLE <- WHOLE |> 
+  select(-Region,-Channel)
+```
+
+```{r}
+# Check for Missing Values
+missing_values <- WHOLE |>
+  summarise(across(everything(), ~ sum(is.na(.))))
+
+print(missing_values) # No missing values so no imputation 
+
+numeric_vars <- names(WHOLE)[sapply(WHOLE, is.numeric)]
+
+# Visual INspection 
+for (var in numeric_vars) {
+  hist(WHOLE[[var]], main = paste("Histogram of", var), xlab = var)
+}
+```
+
+```{r}
+# Transform to be centered 
+DATA.PROCESSED <- WHOLE |>
+  mutate(across(where(is.numeric), ~ log(. + 1))) 
+
+# Loop for log-transformed histograms 
+for (var in numeric_vars) {
+  print(ggplot(DATA.PROCESSED, aes(x = .data[[var]])) +
+          geom_histogram() +
+          labs(title = paste("After Transformation:", var))) 
+}
+
+# Scale
+DATA.PROCESSED <- DATA.PROCESSED |>
+  mutate(across(where(is.numeric), ~ scale(.)[,1]))
+```
+
+## K Means for cluster analysis
+
+```{r}
+WCSS <- c(); possible.k <- 1:15; set.seed(577)  
+for (i in possible.k) {
+  result <- kmeans(DATA.PROCESSED, centers = i, iter.max = 50, nstart = 25)
+  WCSS[i] <- result$tot.withinss
+}
+plot(WCSS ~ possible.k, type = "b", pch = 20, cex = 2,
+     xlab = "Number of Clusters (K)", ylab = "WCSS", main = "Elbow Method for Optimal k")
+```
+
+## Determine with 3 cluster 
+
+```{r}
+set.seed(577)  
+KMEANS <- kmeans(DATA.PROCESSED, centers = 3, iter.max = 75, nstart = 50)
+table(KMEANS$cluster)
+round(KMEANS$centers, 2)
+```
+
+There are a few cluster defining characteristics we can look at for the three clusters created. 
+
+- Cluster 1 has positive values for Fresh and Frozen products meaning these clients buy more of these items on average while these same clients buy less of Milk, Grocery, Detergents_Paper, and Delicassen compared to the average customer. 
+
+- Cluster 2 has positive values for every category indicating these clients spend more than the average consumer at the grocery store, especially for milk and groceries. 
+
+- Cluster 3 has large positive values for Milk, Grocery, and Detergents_Paper indicating they spend more than the average consumer, but also has very large negative values for Fresh, Frozen, and Delicassen items indicating significantly lower spending when compared to the average consumer.
+
+## Try Again with 4 Clusters
+
+```{r}
+set.seed(577)  
+KMEANS4 <- kmeans(DATA.PROCESSED, centers = 4, iter.max = 75, nstart = 50)
+table(KMEANS4$cluster)
+round(KMEANS4$centers, 2)
+```
+
+There are a few cluster defining characteristics we can look at for the four cluster set up. I believe this is a better set up than the 3 cluster method because cluster 4 provides additional information, all negative values, which we do not see represented in the 3 cluster set up. 
+
+- Cluster 1 has positive values for Fresh and Frozen products, like before, but also Delicassen  meaning these clients buy more of these items on average while these same clients buy less of Milk, Grocery, and Detergents_Paper compared to the average customer. 
+
+- Cluster 2 has positive values for Milk, Grocery, and Detergents_Paper indicating these clients spend more than the average consumer for these items, but also has very large negative values for Fresh, Frozen, and Delicassen items indicating significantly lower spending when compared to the average consumer with the overall report looking similar to cluster 3 during the 3 cluster set up.
+
+- Cluster 3 has very positive values for Milk, Grocery, and Detergents_Paper and relatively positive values for Fresh and Delicassen indicating these clients spend more than the average consumer at the grocery store while being slightly below average for Frozen and this cluster has very similar patterns to Cluster 2 from the 3 cluster set up.
+
+- Cluster 4 has very large negative values for Milk, Grocery, Detergents_Paper, and Delicassen and moderatly negative values for Fresh and Frozen items indicating these clients spend less than the average consumer and represents a new cluster that is different from the 3 cluster set up (or could provide more inssights to the analysis). 
+
+## Maybe check for a 5 cluster to see if it can provide any meaningful insights
+
+```{r}
+set.seed(577)  
+KMEANS5 <- kmeans(DATA.PROCESSED, centers = 5, iter.max = 75, nstart = 50)
+table(KMEANS5$cluster)
+round(KMEANS5$centers, 2)
+```
+
+The 5 cluster layout is a little better dispersion, but cluster 1 has 54 while the rest are around 100. There also exhibits some 0.00 values in cluster 4 and cluster 5 so I would probably want to stick with the 4 cluster layout over this one. 
+
+## Lets try Hierical Clustering instead 
+
+```{r}
+HC <- hclust(dist(DATA.PROCESSED),method="complete")  
+plot(HC,main="Dendrogram (Complete)",xlab="Clients")
+unusual_client_index <- which.max(HC$height)
+print(DATA.PROCESSED[unusual_client_index, ])
+summary(DATA.PROCESSED)
+```
+
+One of the first clients to split off was a client with Fresh as 0.34 which is close to the median in the summary statistics so not unusual. Milk (-0.49), Grocery (-0.65), and Frozen (-0.27) were both a little lower than average, but within the interquartile range. Detergents_Paper (-0.97) was unusual as its between the first quartile and minimum meaning this client spends significantly less on detergents and paper than most other clients. The last variable Delicassen (0.76) is slightly above average, but not that unusual.
+
+## Compared to K Means
+
+```{r}
+HC_ward <- hclust(dist(DATA.PROCESSED),method ="ward.D2")
+cluster_assignments <- cutree(HC_ward, k = 4) 
+DATA.PROCESSED$cluster <- cluster_assignments
+
+# Calculate mean values
+aggregate(DATA.PROCESSED[, -ncol(DATA.PROCESSED)], 
+          by = list(cluster = DATA.PROCESSED$cluster), FUN = mean)
+
+# Add cluster assignments
+WHOLE$cluster <- cluster_assignments
+
+# Calculate median values
+aggregate(WHOLE[, -ncol(WHOLE)], by = list(cluster = WHOLE$cluster), FUN = median)
+```
+
+- Cluster 1 is most similar to the kmeans cluster 3 by having very similar values for Milk, Grocery, Detergents_Paper, and Delicassen. 
+
+- Cluster 2 is most similar to the kmeans cluster 1 by sharing high values for Fresh, Frozen, and Delicassen with negative values for Detergents_Paper. Grocery and Milk have opposite signs.
+
+- Cluster 3 is most similar to the kmeans cluster 4 by having negative values for all with the exception of hierarchical clustering having a slight positive value for Fresh and Frozen.
+
+- Cluster 4 is most similar to the kmeans cluster 2 by having very low values for Fresh, Frozen, and Delicassen with moderate values for Grocery and Detergents_Paper
+
+
