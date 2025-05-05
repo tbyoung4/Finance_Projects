@@ -1,0 +1,18 @@
+Project looking at wholesale data to answer the question: 
+
+How can the wholesale distributor leverage customer spending data to identify distinct customer segments and their unique purchasing behaviors in order to optimize marketing strategies, inventory management, and overall business performance?
+
+Website: https://archive.ics.uci.edu/dataset/292/wholesale+customers 
+
+Content: 
+- UCI_ML_Repository_WholeSake_Customers.Rmd
+- UCI_ML_Repository_WholeSake_Customers.pdf
+- wholesale.csv
+
+Package used: 
+- tidyverse
+
+Outcomes: 
+- Identification of Distinct Customer Segments
+- Insights into Customer Purchasing Behaviors
+- Development of Targeted Marketing Strategies
