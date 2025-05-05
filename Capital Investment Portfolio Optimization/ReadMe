@@ -1,0 +1,21 @@
+Project looking at simulated hospital department data to answer the question: 
+
+Using simulated data, what system can be developed to streamline the evaluation, prioritization, and tracking of capital investment proposals to promoting transparency and accountability in the decision-making process?
+
+The pipeline enables risk-adjusted ROI assessment by considering potential revenue fluctuations in different scenarios.
+
+Content: 
+- Capital Investment Portfolio Optimization.ipynb
+- capital_investment_proposals.csv
+
+Packages used: 
+- numpy
+- pandas
+- newton
+- prophet
+- matplotlib.pyplot
+
+Outcomes: 
+- Reduced proposal evaluation time
+- Improved allocation of resources
+- Increased return on investment (ROI)
